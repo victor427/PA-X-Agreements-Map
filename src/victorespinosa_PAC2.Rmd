@@ -1,0 +1,76 @@
+---
+title: "Preprocesament de les dades"
+author: "Víctor Espinosa Yxart"
+date: "Novembre 4, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Aplicar correccions al fitxer
+Fem una primera inspecció del fitxer, el que podem veure és un fitxer del tipus CSV amb algunes característiques com:
+
+* Els valors es separen amb una coma ( , )
+* Té capçalera
+* El separador decimal és el punt ( . )
+* El signe per tancar les cadenes de text és la doble coma ( " )
+
+Amb aquesta informació podem fer servir la funció *read.csv* per llegir el fitxer i transformar-lo en dades estructurades.
+
+```{r, warning=FALSE}
+inputFile <- "./pax_corpus_1789_agreements_16-11-19.csv"
+
+writeLines(readLines(inputFile, n = 1))
+
+agreements <- read.csv(inputFile, header = TRUE, sep = ",", quote = "\"", dec = ".", stringsAsFactors = FALSE)
+
+agreements[1, 2]
+
+```
+
+Preprocessat del text.
+
+```{r, warning=FALSE}
+library(stringi)
+library(stringr)
+library(tm)
+library(qdap)
+
+all_stops <- c(stopwords("en"), stopwords("es"), stopwords("fr"))
+
+all_stops
+
+for(i in 1:nrow(agreements)) {
+    text <- agreements[i, 2]
+    text <- str_to_lower(text)
+    text <- str_replace_all(text, "[\r\n\t]" , "")
+        
+    text <- stri_trans_general(text, "Latin-ASCII")
+
+    text <- removePunctuation(text)
+    text <- removeNumbers(text)
+    text <- bracketX(text)
+    text <- replace_number(text)
+    text <- replace_abbreviation(text)
+    text <- replace_contraction(text)
+    text <- replace_symbol(text)
+    
+    text <- removeWords(text, all_stops)
+    
+    text <- stripWhitespace(text)
+    agreements[i, 2] <- text
+}
+
+agreementsClean           <- cbind(agreements[1], agreements[2])
+colnames(agreementsClean) <- list("id", "text")
+
+```
+
+Fitxer corretgit.
+
+```{r, warning=FALSE}
+write.csv(agreementsClean, file="agreementsClean.csv", sep = ",")
+
+```
